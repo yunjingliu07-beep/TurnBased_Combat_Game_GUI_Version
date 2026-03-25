@@ -2,6 +2,7 @@ package control;
 
 import actions.Actions;
 import domain.Combatant;
+import domain.Enemy;
 
 import java.util.List;
 

@@ -1,0 +1,15 @@
+package items;
+
+import domain.Player;
+
+public class PotionItem implements Items{
+
+    @Override
+    public String getName(){
+        return "Heal Potion";
+    }
+
+    public void apply(BattleContext ctx, Player p){
+        p.heal(100);
+    }
+}

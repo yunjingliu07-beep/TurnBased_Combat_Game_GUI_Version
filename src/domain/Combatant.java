@@ -1,4 +1,5 @@
 package domain;
+import effects.StatusEffects;
 
 public interface Combatant {
     String getName(); //Get the name of the combatant
@@ -10,7 +11,7 @@ public interface Combatant {
     boolean isAlive();
     void takeDamage(int damage);
     void heal(int amount);
-    void addStatusEffect(StatusEffect e);
+    void addStatusEffect(StatusEffects e);
     boolean canAct();
 
 }

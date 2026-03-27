@@ -6,6 +6,8 @@ import domain.Player;
 import items.Inventory;
 import ui.GameUI;
 
+import java.util.Scanner;
+
 public class UseItems implements Actions {
 
     GameUI ui;
@@ -23,9 +25,11 @@ public class UseItems implements Actions {
     public void execute(BattleContext ctx, Combatant p){
         Player player = (Player) p;
 
-        int choice = ui.chooseItems();
         Inventory playerInventory = player.getInventory();
-        playerInventory.useItem(choice, ctx, player);
+        playerInventory.displayItems();
+        Scanner sc = new Scanner(System.in);
+        int choice = sc.nextInt();
+        playerInventory.useItem(choice - 1 , ctx, player);
 
     }
 

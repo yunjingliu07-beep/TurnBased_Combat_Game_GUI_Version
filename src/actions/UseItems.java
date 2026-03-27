@@ -26,11 +26,15 @@ public class UseItems implements Actions {
         Player player = (Player) p;
 
         Inventory playerInventory = player.getInventory();
-        playerInventory.displayItems();
-        Scanner sc = new Scanner(System.in);
-        int choice = sc.nextInt();
-        playerInventory.useItem(choice - 1 , ctx, player);
-
+        if (playerInventory.displayItems()){
+            Scanner sc = new Scanner(System.in);
+            System.out.println("Enter the number of the item you want to use:");
+            int choice = sc.nextInt();
+            playerInventory.useItem(choice - 1 , ctx, player);
+        }
+        else{
+            System.out.println("You don't have enough items to use this action, congrats on wasting a turn!");
+        }
     }
 
 }

@@ -1,5 +1,6 @@
 package actions;
 
+import control.BattleContext;
 import domain.Combatant;
 import domain.Enemy;
 import domain.Player;
@@ -37,6 +38,7 @@ public class ArcaneBlast extends SpecialSkill{
             if(!e.isAlive()) {
                 kills++;
                 System.out.println(player.getName() + " has defeated "+ e.getName());
+                ctx.getAliveEnemies().remove(e);
             }
         }
 

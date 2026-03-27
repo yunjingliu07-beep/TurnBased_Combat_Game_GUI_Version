@@ -1,5 +1,6 @@
 package actions;
 
+import control.BattleContext;
 import domain.Combatant;
 
 public interface Actions {

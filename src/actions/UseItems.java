@@ -1,5 +1,6 @@
 package actions;
 
+import control.BattleContext;
 import domain.Combatant;
 import domain.Player;
 import items.Inventory;

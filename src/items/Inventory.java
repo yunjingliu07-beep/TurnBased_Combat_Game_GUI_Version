@@ -1,6 +1,7 @@
 package items;
 
 import domain.Player;
+import control.BattleContext;
 
 import java.util.ArrayList;
 import java.util.List;

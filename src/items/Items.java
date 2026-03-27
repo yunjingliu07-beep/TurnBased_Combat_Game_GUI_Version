@@ -1,5 +1,6 @@
 package items;
 
+import control.BattleContext;
 import domain.Player;
 
 public interface Items {

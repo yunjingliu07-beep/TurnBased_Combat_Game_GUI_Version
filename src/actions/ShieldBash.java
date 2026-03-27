@@ -1,6 +1,8 @@
 package actions;
 
+import control.BattleContext;
 import domain.Combatant;
+import domain.Enemy;
 import domain.Player;
 import effects.StunEffect;
 
@@ -34,6 +36,10 @@ public class ShieldBash extends SpecialSkill{
         target.takeDamage(dmg);
         if (!target.isAlive()){
             System.out.println(actor.getName() + " has defeated "+ target.getName());
+            if (target instanceof Enemy) {
+                // Remove dead enemies from the list
+                ctx.getAliveEnemies().remove(target);
+            }
         }
         else{
             target.addStatusEffect(new StunEffect());

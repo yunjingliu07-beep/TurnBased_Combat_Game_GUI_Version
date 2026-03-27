@@ -31,7 +31,7 @@ public class DefenseBuffEffect implements StatusEffects {
     }
 
     @Override
-    public void onTick(BattleContext ctx, Combatant target){
+    public void onTick(){
         turns--;
     }
 

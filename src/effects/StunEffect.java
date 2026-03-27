@@ -31,7 +31,7 @@ public class StunEffect implements StatusEffects{
     }
 
     @Override
-    public void onTick(BattleContext ctx, Combatant target){
+    public void onTick(){
         turns--;
     }
 

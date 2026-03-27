@@ -8,6 +8,6 @@ public interface StatusEffects {
     int modifyAtk();
     int modifyDef();
     int modifySpd();
-    void onTick(BattleContext ctx, Combatant target);
+    void onTick();
     boolean isExpired();
 }

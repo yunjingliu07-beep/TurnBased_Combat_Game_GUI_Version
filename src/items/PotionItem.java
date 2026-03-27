@@ -12,6 +12,7 @@ public class PotionItem implements Items{
 
     @Override
     public void apply(BattleContext ctx, Player p){
+        System.out.println(p.getName() + " uses " + this.getName() + ", heal by 100!");
         p.heal(100);
     }
 }

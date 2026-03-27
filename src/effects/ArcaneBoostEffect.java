@@ -17,7 +17,7 @@ public class ArcaneBoostEffect implements StatusEffects{
 
     @Override
     public int modifyAtk(){
-        return 0; // Arcane boost do not modify atk
+        return 10; // Arcane boost modify atk by 10
     }
 
     @Override

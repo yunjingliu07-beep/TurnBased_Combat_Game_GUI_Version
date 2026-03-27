@@ -13,6 +13,19 @@ public class Inventory{
         items.add(i);
     }
 
+    public boolean displayItems(){
+        if(!items.isEmpty()){
+            for(int i = 0; i < items.size(); i++){
+                System.out.println(i+1 + " : " + items.get(i).getName());
+            }
+            return true;
+        }
+        else{
+            System.out.println("There are no items in your inventory!");
+            return false;
+        }
+    }
+
     public void useItem(int index, BattleContext ctx, Player p){
         if(index >= 0 && index < items.size()){
             Items itemUsed =  items.remove(index);

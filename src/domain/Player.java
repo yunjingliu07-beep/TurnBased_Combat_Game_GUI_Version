@@ -21,6 +21,11 @@ public abstract class Player extends AbstractCombatant{
         }
     }
 
+    public boolean canUseSpecialSkill(){
+        return specialCooldown == 0;
+    }
+
+
     public Inventory getInventory() {
         return inventory;
     }

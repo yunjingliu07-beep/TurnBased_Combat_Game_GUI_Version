@@ -9,6 +9,7 @@ public class PotionItem implements Items{
         return "Heal Potion";
     }
 
+    @Override
     public void apply(BattleContext ctx, Player p){
         p.heal(100);
     }

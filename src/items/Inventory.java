@@ -22,4 +22,12 @@ public class Inventory{
         }
     }
 
+    public boolean isEmpty(){
+        return items.isEmpty();
+    }
+
+    public int  getSize(){
+        return items.size();
+    }
+
 }

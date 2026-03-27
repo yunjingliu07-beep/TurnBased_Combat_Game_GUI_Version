@@ -12,6 +12,7 @@ public class SmokeBomb implements Items{
 
     @Override
     public void apply(BattleContext ctx, Player c){
+        System.out.println(c.getName() + " uses " + this.getName() + ", receiving 0 dmg for the next 2 turns!");
         ctx.activateSmokeBomb();
     }
 }

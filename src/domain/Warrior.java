@@ -1,9 +1,11 @@
 package domain;
 
-public class Wizard extends Player{
+import actions.SpecialSkill;
 
-    public Wizard() {
-        super("Wizard", 200, 50, 10, 20);
+public class Warrior extends Player {
+    // Constructor
+    public Warrior() {
+        super("Warrior", 260, 40, 20, 30);
     }
 
     @Override

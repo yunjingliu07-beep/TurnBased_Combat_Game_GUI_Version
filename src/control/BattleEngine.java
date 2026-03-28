@@ -1,10 +1,7 @@
 package control;
 
 import actions.*;
-import domain.Combatant;
-import domain.Player;
-import domain.Warrior;
-import domain.Wizard;
+import domain.*;
 import ui.GameUI;
 
 import java.util.ArrayList;
@@ -42,10 +39,32 @@ public class BattleEngine {
             for (Combatant combatant : order) {
                 //Player's turn
                 if (combatant instanceof Player) {
-
+                    // If not stunned
+                    if(combatant.canAct()) {
+                        playersTurn((Player) combatant, ctx);
+                    }
+                    else {
+                        System.out.println(combatant.getName() + " is stunned! Cannot act!");
+                    }
+                }
+                //Enemy's turn
+                else{
+                    if(combatant.canAct()) {
+                        enemyTurn((Enemy)  combatant, ctx);
+                    }
+                    else {
+                        System.out.println(combatant.getName() + " is stunned! Cannot act!");
+                    }
+                }
+                //Check if the player's dead after each combatant's turn
+                if(!player.isAlive()){
+                    break;
                 }
             }
         }
+        // Loop ends, player is dead
+        gameUI.showBattleResult(false);
+        return BattleOutcome.LOSE;
     }
     void playersTurn(Player player, BattleContext ctx) {
         int choice = gameUI.choosePlayerActions();
@@ -78,6 +97,15 @@ public class BattleEngine {
                     ArcaneBlast ABaction = new ArcaneBlast(true);
                     ABaction.execute(ctx, player);
                 }
+            default:
+                System.out.println("Invalid choice, turn skipped");
         }
+        // Update effects after turn
+        player.tickEffects();
+        player.tickSpecialCooldown();
+    }
+    void enemyTurn(Enemy e, BattleContext ctx) {
+        BasicAttackAction EBAaction = new BasicAttackAction(ctx.getPlayer());
+        EBAaction.execute(ctx, e);
     }
 }

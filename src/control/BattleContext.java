@@ -4,6 +4,7 @@ import domain.Enemy;
 import domain.Player;
 import domain.Warrior;
 import domain.Wizard;
+import ui.GameUI;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,14 +16,16 @@ public class BattleContext {
     private List<Enemy> backupEnemies;
     private int smokeBombTurnsLeft;
     private int initialEnemyCount;
+    private GameUI gameUI;
 
     // If no backup, just pass in an empty list
-    public BattleContext(Player player, List<Enemy> enemies, List<Enemy> backupEnemies){
+    public BattleContext(Player player, List<Enemy> enemies, List<Enemy> backupEnemies,  GameUI gameUI) {
         this.player = player;
         this.enemiesAlive = enemies;
         this.backupEnemies = backupEnemies;
         initialEnemyCount =  enemies.size();
         smokeBombTurnsLeft = 0;
+        this.gameUI = gameUI;
     }
 
     public Player getPlayer(){
@@ -31,6 +34,10 @@ public class BattleContext {
 
     public List<Enemy> getAliveEnemies(){
         return enemiesAlive;
+    }
+
+    public GameUI getGameUI(){
+        return gameUI;
     }
 
     public void activateSmokeBomb(){

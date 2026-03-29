@@ -19,26 +19,23 @@ public class ArcaneBlast extends SpecialSkill{
         this.consumeCooldown = consumeCoolDown;
     }
     @Override
-    public void execute(BattleContext ctx, Combatant combatant){
+    public boolean execute(BattleContext ctx, Combatant combatant){
         Player player = (Player) combatant;
         // player's special skill is still on CD & not using the skill via power stone
         if (consumeCooldown && !player.canUseSpecialSkill()) {
-            System.out.println(player.getName() + "'s Shield Bash is on cooldown for "
+            System.out.println(player.getName() + "'s Arcane Blast is on cooldown for "
                     + player.getSpecialCooldown() + " more turn(s).");
         }
         int kills = 0;
         List<Enemy> enemyAlive = ctx.getAliveEnemies();
 
-        // Deals dmg to all enemies and check if they're dead
-        for (Enemy e: enemyAlive){
-            int dmg = Math.max(0, player.getAtk() - e.getDef());
-            System.out.println(player.getName() + " uses arcane blast on enemy " + e.getName());
-            System.out.println("The damage is " + dmg);
-            e.takeDamage(dmg);
-            if(!e.isAlive()) {
+        // Deals basic attack to all enemies and check if they're dead
+        for (int i = enemyAlive.size() - 1; i >= 0; i--) {
+            BasicAttackAction BAaction = new BasicAttackAction(enemyAlive.get(i));
+            boolean defeated = BAaction.execute(ctx, player);
+            //If defeat an enemy, kills +=1
+            if (defeated){
                 kills++;
-                System.out.println(player.getName() + " has defeated "+ e.getName());
-                ctx.getAliveEnemies().remove(e);
             }
         }
 
@@ -48,9 +45,11 @@ public class ArcaneBlast extends SpecialSkill{
             for (int i = 0; i < kills; i++) {
                 player.addStatusEffect(new ArcaneBoostEffect());
             }
+            return true; // Make kills
         }
 
         player.useSpecialSkill(consumeCooldown);
+        return false; // Make no kills
 
     }
 

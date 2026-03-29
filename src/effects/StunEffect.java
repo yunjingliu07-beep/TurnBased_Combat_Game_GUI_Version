@@ -12,7 +12,7 @@ public class StunEffect implements StatusEffects{
 
     @Override
     public boolean blockAction(){
-        return false;
+        return true;
     }
 
     @Override

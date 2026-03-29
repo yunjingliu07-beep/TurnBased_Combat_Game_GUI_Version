@@ -61,12 +61,12 @@ public abstract class AbstractCombatant implements Combatant {
 
     @Override
     public boolean isAlive() {
-        return this.hp <= 0; // If hp <= 0, combatant is dead, return true
+        return !(this.hp <= 0); // If hp <= 0, combatant is dead, return true
     }
 
     @Override
     public void takeDamage(int damage) {
-        this.hp = Math.min(0,this.hp-damage);
+        this.hp = Math.max(0,this.hp-damage);
     }
 
     @Override
@@ -82,11 +82,7 @@ public abstract class AbstractCombatant implements Combatant {
 
     @Override
     public void removeExpiredEffect(){
-        for (StatusEffects e: effects){
-            if (e.isExpired()){
-                effects.remove(e);
-            }
-        }
+        effects.removeIf(StatusEffects::isExpired);
     }
 
     @Override

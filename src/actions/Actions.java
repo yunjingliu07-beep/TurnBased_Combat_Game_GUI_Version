@@ -5,5 +5,5 @@ import domain.Combatant;
 
 public interface Actions {
     String actionName();
-    void execute(BattleContext ctx, Combatant c);
+    boolean execute(BattleContext ctx, Combatant c);
 }

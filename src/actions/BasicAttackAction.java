@@ -18,7 +18,7 @@ public class BasicAttackAction implements Actions {
     }
 
     @Override
-    public void execute(BattleContext ctx, Combatant actor){
+    public boolean execute(BattleContext ctx, Combatant actor){
         // Calculate dmg dealt.
         int dmg = Math.max(0, actor.getAtk() - target.getDef());
 
@@ -30,6 +30,7 @@ public class BasicAttackAction implements Actions {
         // Report dmg info
         System.out.println(actor.getName() + " uses basic attack on " + target.getName() + " !");
         System.out.println("The damage is " + dmg);
+        System.out.println();
         target.takeDamage(dmg);
 
         if (!target.isAlive()){
@@ -38,9 +39,12 @@ public class BasicAttackAction implements Actions {
                 // Remove dead enemies from the list
                 ctx.getAliveEnemies().remove(target);
             }
+            return true;
         }
         else{
             System.out.println("The current status of the target is:\n" + target.getCurrentAttribute());
+            System.out.println();
+            return false;
         }
 
     }

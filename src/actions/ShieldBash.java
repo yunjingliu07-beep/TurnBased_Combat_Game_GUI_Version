@@ -21,7 +21,7 @@ public class ShieldBash extends SpecialSkill{
     }
 
     @Override
-    public void execute(BattleContext ctx, Combatant actor){
+    public boolean execute(BattleContext ctx, Combatant actor){
         Player player = (Player) actor;
 
         // player's special skill is still on CD & not using the skill via power stone
@@ -30,24 +30,19 @@ public class ShieldBash extends SpecialSkill{
                     + player.getSpecialCooldown() + " more turn(s).");
         }
 
-        int dmg = Math.max(0, player.getAtk() - target.getDef());
-        System.out.println(actor.getName() + " uses Shield Bash on " + target.getName() + "!");
-        System.out.println("The damage is " + dmg);
-        target.takeDamage(dmg);
-        if (!target.isAlive()){
-            System.out.println(actor.getName() + " has defeated "+ target.getName());
-            if (target instanceof Enemy) {
-                // Remove dead enemies from the list
-                ctx.getAliveEnemies().remove(target);
-            }
-        }
-        else{
+        // Perform basic attack to the enemy
+        BasicAttackAction BAaction = new BasicAttackAction(target);
+        boolean defeated = BAaction.execute(ctx, player);
+
+        if(!defeated){
             target.addStatusEffect(new StunEffect());
             System.out.println(target.getName() + " has been stunned for this turn and next turn");
             System.out.println("The current status of the target is:\n" + target.getCurrentAttribute());
+            return false;
         }
 
         player.useSpecialSkill(consumeCooldown);
+        return true;
 
     }
 

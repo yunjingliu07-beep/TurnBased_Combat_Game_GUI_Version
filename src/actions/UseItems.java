@@ -22,7 +22,7 @@ public class UseItems implements Actions {
     }
 
     @Override
-    public void execute(BattleContext ctx, Combatant p){
+    public boolean execute(BattleContext ctx, Combatant p){
         Player player = (Player) p;
 
         Inventory playerInventory = player.getInventory();
@@ -35,6 +35,7 @@ public class UseItems implements Actions {
         else{
             System.out.println("You don't have enough items to use this action, congrats on wasting a turn!");
         }
+        return false;
     }
 
 }

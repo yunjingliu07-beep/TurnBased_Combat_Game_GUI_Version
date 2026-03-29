@@ -12,9 +12,10 @@ public class DefendAction implements Actions {
     }
 
     @Override
-    public void execute(BattleContext ctx, Combatant actor){
+    public boolean execute(BattleContext ctx, Combatant actor){
         actor.addStatusEffect(new DefenseBuffEffect());
         System.out.println(actor.getName() + " has used defend! Add 10 DEF for this turn and next turn!");
         System.out.println("The current status of the target is:\n" + actor.getCurrentAttribute());
+        return false;
     }
 }

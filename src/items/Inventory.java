@@ -13,6 +13,10 @@ public class Inventory{
         items.add(i);
     }
 
+    public List<Items> getItems(){
+        return items;
+    }
+
     public boolean displayItems(){
         if(!items.isEmpty()){
             for(int i = 0; i < items.size(); i++){

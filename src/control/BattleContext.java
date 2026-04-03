@@ -57,6 +57,7 @@ public class BattleContext {
     public void spawnBackupEnemies(){
         if (!backupEnemies.isEmpty() && enemiesAlive.isEmpty()){
             enemiesAlive.addAll(backupEnemies);
+            backupEnemies.clear();
             System.out.println("Backup enemies appear! >>> ");
         }
     }

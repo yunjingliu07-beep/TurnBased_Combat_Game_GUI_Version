@@ -23,8 +23,12 @@ public class ArcaneBlast extends SpecialSkill{
         Player player = (Player) combatant;
         // player's special skill is still on CD & not using the skill via power stone
         if (consumeCooldown && !player.canUseSpecialSkill()) {
-            System.out.println(player.getName() + "'s Arcane Blast is on cooldown for "
-                    + player.getSpecialCooldown() + " more turn(s).");
+            String message = player.getName() + "'s Arcane Blast is on cooldown for "
+                    + player.getSpecialCooldown() + " more turn(s).";
+            if (ctx.getGameUI() != null) {
+                ctx.getGameUI().showMessage("[SYSTEM] " + message);
+            }
+            System.out.println(message);
             return false;
         }
         int kills = 0;

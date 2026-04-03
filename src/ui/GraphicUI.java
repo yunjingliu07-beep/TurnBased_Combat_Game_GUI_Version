@@ -13,10 +13,13 @@ import items.Items;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.imageio.ImageIO;
 import java.awt.*;
+import java.io.File;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
+import java.awt.image.BufferedImage;
 
 /**
  * GraphicUI
@@ -43,6 +46,14 @@ public class GraphicUI extends JFrame implements GameUI {
     private JPanel startPanel;
     private JPanel setupPanel;
     private JPanel battlePanel;
+    private JPanel battleCenterPanel;
+    private CardLayout battleCenterLayout;
+    private JPanel resultPanel;
+    private JLabel resultTitleLabel;
+    private JLabel resultMessageLabel;
+    private JPanel itemPanel;
+    private JPanel itemGrid;
+    private JPanel actionContainer;
 
     // =========================
     // Fonts
@@ -54,10 +65,14 @@ public class GraphicUI extends JFrame implements GameUI {
     // =========================
     // Setup screen controls
     // =========================
-    private JComboBox<String> classBox;
-    private JComboBox<String> item1Box;
-    private JComboBox<String> item2Box;
-    private JComboBox<String> difficultyBox;
+    private JButton[] classButtons;
+    private JButton[] item1Buttons;
+    private JButton[] item2Buttons;
+    private JButton[] difficultyButtons;
+    private int selectedClassIndex = 0;
+    private int selectedItem1Index = 0;
+    private int selectedItem2Index = 0;
+    private int selectedDifficultyIndex = 0;
 
     // =========================
     // Battle screen components
@@ -65,6 +80,7 @@ public class GraphicUI extends JFrame implements GameUI {
     private JLabel playerNameLabel;
     private JLabel playerStatsLabel;
     private JProgressBar playerHpBar;
+    private JLabel playerPortraitLabel;
 
     private JPanel enemyPanel;
     private JTextArea battleLog;
@@ -80,6 +96,7 @@ public class GraphicUI extends JFrame implements GameUI {
     private GraphicBattleEngine engine;
     private BattleContext currentContext;
     private GameSettings currentSettings;
+    private AudioPlayer audioPlayer;
 
     // Which action is waiting for an enemy click?
     private enum ActionMode {
@@ -100,6 +117,7 @@ public class GraphicUI extends JFrame implements GameUI {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setResizable(false);
+        audioPlayer = new AudioPlayer();
 
         // Load fonts (pixel style if available)
         titleFont = loadPixelFont(20f);
@@ -120,6 +138,7 @@ public class GraphicUI extends JFrame implements GameUI {
 
         add(rootPanel);
         cardLayout.show(rootPanel, "START");
+        setVisible(true);
     }
 
     // ============================================================
@@ -152,7 +171,11 @@ public class GraphicUI extends JFrame implements GameUI {
                         "- ATK: 50\n" +
                         "- DEF: 10\n" +
                         "- SPD: 20\n" +
-                        "- Special: Arcane Blast"
+                        "- Special: Arcane Blast",
+                Arrays.asList(
+                        loadImageLabel("GameAssets/images/Warrior.png", 96, 96),
+                        loadImageLabel("GameAssets/images/Wizard.png", 96, 96)
+                )
         ));
 
         infoPanel.add(createInfoCard(
@@ -162,7 +185,11 @@ public class GraphicUI extends JFrame implements GameUI {
                         "Wolf\n" +
                         "- Stronger and faster\n\n" +
                         "Enemies vary by difficulty.\n" +
-                        "Some difficulties spawn backup waves."
+                        "Some difficulties spawn backup waves.",
+                Arrays.asList(
+                        loadImageLabel("GameAssets/images/Goblin.png", 96, 96),
+                        loadImageLabel("GameAssets/images/Wolf.png", 96, 96)
+                )
         ));
 
         infoPanel.add(createInfoCard(
@@ -195,45 +222,112 @@ public class GraphicUI extends JFrame implements GameUI {
     // ============================================================
     private void buildSetupPanel() {
         setupPanel = new JPanel(new BorderLayout());
-        setupPanel.setBackground(new Color(24, 24, 24));
+        setupPanel.setBackground(new Color(24, 20, 16));
         setupPanel.setBorder(new EmptyBorder(24, 24, 24, 24));
 
         JLabel title = new JLabel("GAME SETUP", SwingConstants.CENTER);
-        title.setForeground(Color.WHITE);
+        title.setForeground(new Color(240, 220, 180));
         title.setFont(titleFont);
         title.setBorder(new EmptyBorder(0, 0, 24, 0));
         setupPanel.add(title, BorderLayout.NORTH);
 
-        JPanel center = new JPanel(new GridBagLayout());
+        JPanel center = new JPanel();
         center.setOpaque(false);
+        center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
 
-        JPanel form = new JPanel(new GridBagLayout());
-        form.setOpaque(false);
-        form.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(Color.WHITE, 2),
-                new EmptyBorder(20, 20, 20, 20)
-        ));
+        JPanel classSection = createSetupSection("CHOOSE YOUR CLASS");
+        JPanel classRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
+        classRow.setOpaque(false);
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
-        gbc.anchor = GridBagConstraints.WEST;
+        JButton warriorButton = createSelectionButton(
+                "Warrior",
+                loadImageIcon("GameAssets/images/Warrior.png", 96, 96)
+        );
+        JButton wizardButton = createSelectionButton(
+                "Wizard",
+                loadImageIcon("GameAssets/images/Wizard.png", 96, 96)
+        );
 
-        classBox = new JComboBox<>(new String[]{"Warrior", "Wizard"});
-        item1Box = new JComboBox<>(new String[]{"Heal Potion", "Power Stone", "Smoke Bomb"});
-        item2Box = new JComboBox<>(new String[]{"Heal Potion", "Power Stone", "Smoke Bomb"});
-        difficultyBox = new JComboBox<>(new String[]{"Easy", "Medium", "Hard"});
+        classButtons = new JButton[]{warriorButton, wizardButton};
+        for (int i = 0; i < classButtons.length; i++) {
+            final int index = i;
+            classButtons[i].addActionListener(e -> {
+                selectedClassIndex = index;
+                updateSelectionGroup(classButtons, selectedClassIndex);
+            });
+            classRow.add(classButtons[i]);
+        }
+        updateSelectionGroup(classButtons, selectedClassIndex);
+        classSection.add(classRow, BorderLayout.CENTER);
 
-        styleComboBox(classBox);
-        styleComboBox(item1Box);
-        styleComboBox(item2Box);
-        styleComboBox(difficultyBox);
+        JPanel itemSection = createSetupSection("CHOOSE INITIAL ITEMS");
+        JPanel itemContainer = new JPanel();
+        itemContainer.setOpaque(false);
+        itemContainer.setLayout(new BoxLayout(itemContainer, BoxLayout.Y_AXIS));
 
-        addFormRow(form, gbc, 0, "Player Class:", classBox);
-        addFormRow(form, gbc, 1, "Initial Item 1:", item1Box);
-        addFormRow(form, gbc, 2, "Initial Item 2:", item2Box);
-        addFormRow(form, gbc, 3, "Difficulty:", difficultyBox);
+        ImageIcon potionIcon = createBadgeIcon("HP", new Color(150, 40, 40), new Color(255, 235, 210));
+        ImageIcon powerIcon = createBadgeIcon("PS", new Color(40, 70, 140), new Color(230, 235, 255));
+        ImageIcon smokeIcon = createBadgeIcon("SM", new Color(70, 70, 70), new Color(240, 240, 240));
 
-        center.add(form);
+        item1Buttons = new JButton[]{
+                createSelectionButton("Heal Potion", potionIcon),
+                createSelectionButton("Power Stone", powerIcon),
+                createSelectionButton("Smoke Bomb", smokeIcon)
+        };
+        item2Buttons = new JButton[]{
+                createSelectionButton("Heal Potion", potionIcon),
+                createSelectionButton("Power Stone", powerIcon),
+                createSelectionButton("Smoke Bomb", smokeIcon)
+        };
+
+        JPanel itemRow1 = createItemRow("Item Slot 1", item1Buttons);
+        JPanel itemRow2 = createItemRow("Item Slot 2", item2Buttons);
+
+        for (int i = 0; i < item1Buttons.length; i++) {
+            final int index = i;
+            item1Buttons[i].addActionListener(e -> {
+                selectedItem1Index = index;
+                updateSelectionGroup(item1Buttons, selectedItem1Index);
+            });
+            item2Buttons[i].addActionListener(e -> {
+                selectedItem2Index = index;
+                updateSelectionGroup(item2Buttons, selectedItem2Index);
+            });
+        }
+        updateSelectionGroup(item1Buttons, selectedItem1Index);
+        updateSelectionGroup(item2Buttons, selectedItem2Index);
+
+        itemContainer.add(itemRow1);
+        itemContainer.add(Box.createVerticalStrut(10));
+        itemContainer.add(itemRow2);
+        itemSection.add(itemContainer, BorderLayout.CENTER);
+
+        JPanel difficultySection = createSetupSection("CHOOSE DIFFICULTY");
+        JPanel difficultyRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
+        difficultyRow.setOpaque(false);
+
+        difficultyButtons = new JButton[]{
+                createSelectionButton("Easy", createBadgeIcon("E", new Color(70, 120, 70), new Color(240, 250, 240))),
+                createSelectionButton("Medium", createBadgeIcon("M", new Color(140, 110, 40), new Color(255, 245, 220))),
+                createSelectionButton("Hard", createBadgeIcon("H", new Color(140, 60, 50), new Color(255, 235, 230)))
+        };
+
+        for (int i = 0; i < difficultyButtons.length; i++) {
+            final int index = i;
+            difficultyButtons[i].addActionListener(e -> {
+                selectedDifficultyIndex = index;
+                updateSelectionGroup(difficultyButtons, selectedDifficultyIndex);
+            });
+            difficultyRow.add(difficultyButtons[i]);
+        }
+        updateSelectionGroup(difficultyButtons, selectedDifficultyIndex);
+        difficultySection.add(difficultyRow, BorderLayout.CENTER);
+
+        center.add(classSection);
+        center.add(Box.createVerticalStrut(16));
+        center.add(itemSection);
+        center.add(Box.createVerticalStrut(16));
+        center.add(difficultySection);
         setupPanel.add(center, BorderLayout.CENTER);
 
         JButton backButton = createPixelButton("BACK");
@@ -255,16 +349,21 @@ public class GraphicUI extends JFrame implements GameUI {
     // ============================================================
     private void buildBattlePanel() {
         battlePanel = new JPanel(new BorderLayout(16, 16));
-        battlePanel.setBackground(new Color(20, 20, 20));
+        battlePanel.setBackground(new Color(24, 20, 16));
         battlePanel.setBorder(new EmptyBorder(16, 16, 16, 16));
 
         // Top area: player panel
         JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setBackground(new Color(30, 30, 30));
+        topPanel.setBackground(new Color(36, 28, 20));
         topPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(Color.WHITE, 2),
+                BorderFactory.createLineBorder(new Color(220, 200, 160), 2),
                 new EmptyBorder(12, 12, 12, 12)
         ));
+
+        JLabel statusTitle = new JLabel("HERO STATUS");
+        statusTitle.setForeground(new Color(240, 220, 180));
+        statusTitle.setFont(bodyFont);
+        statusTitle.setBorder(new EmptyBorder(0, 0, 8, 0));
 
         playerNameLabel = new JLabel("Player");
         playerNameLabel.setForeground(Color.WHITE);
@@ -277,17 +376,29 @@ public class GraphicUI extends JFrame implements GameUI {
         playerHpBar = new JProgressBar();
         playerHpBar.setStringPainted(true);
         playerHpBar.setFont(smallFont);
+        playerHpBar.setForeground(new Color(200, 70, 60));
+        playerHpBar.setBackground(new Color(55, 35, 30));
         playerHpBar.setPreferredSize(new Dimension(400, 28));
+
+        playerPortraitLabel = new JLabel();
+        playerPortraitLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        playerPortraitLabel.setPreferredSize(new Dimension(120, 120));
+        playerPortraitLabel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(220, 200, 160), 2),
+                new EmptyBorder(6, 6, 6, 6)
+        ));
 
         JPanel playerInfo = new JPanel();
         playerInfo.setOpaque(false);
         playerInfo.setLayout(new BoxLayout(playerInfo, BoxLayout.Y_AXIS));
+        playerInfo.add(statusTitle);
         playerInfo.add(playerNameLabel);
         playerInfo.add(Box.createVerticalStrut(8));
         playerInfo.add(playerHpBar);
         playerInfo.add(Box.createVerticalStrut(8));
         playerInfo.add(playerStatsLabel);
 
+        topPanel.add(playerPortraitLabel, BorderLayout.WEST);
         topPanel.add(playerInfo, BorderLayout.CENTER);
         battlePanel.add(topPanel, BorderLayout.NORTH);
 
@@ -297,14 +408,14 @@ public class GraphicUI extends JFrame implements GameUI {
 
         // Enemy side
         JPanel enemyContainer = new JPanel(new BorderLayout());
-        enemyContainer.setBackground(new Color(30, 30, 30));
+        enemyContainer.setBackground(new Color(36, 28, 20));
         enemyContainer.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(Color.WHITE, 2),
+                BorderFactory.createLineBorder(new Color(220, 200, 160), 2),
                 new EmptyBorder(12, 12, 12, 12)
         ));
 
         JLabel enemyTitle = new JLabel("ENEMIES", SwingConstants.CENTER);
-        enemyTitle.setForeground(Color.WHITE);
+        enemyTitle.setForeground(new Color(240, 220, 180));
         enemyTitle.setFont(bodyFont);
         enemyTitle.setBorder(new EmptyBorder(0, 0, 10, 0));
 
@@ -314,21 +425,21 @@ public class GraphicUI extends JFrame implements GameUI {
 
         JScrollPane enemyScroll = new JScrollPane(enemyPanel);
         enemyScroll.setBorder(null);
-        enemyScroll.getViewport().setBackground(new Color(30, 30, 30));
+        enemyScroll.getViewport().setBackground(new Color(36, 28, 20));
 
         enemyContainer.add(enemyTitle, BorderLayout.NORTH);
         enemyContainer.add(enemyScroll, BorderLayout.CENTER);
 
         // Log side
         JPanel logContainer = new JPanel(new BorderLayout());
-        logContainer.setBackground(new Color(30, 30, 30));
+        logContainer.setBackground(new Color(36, 28, 20));
         logContainer.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(Color.WHITE, 2),
+                BorderFactory.createLineBorder(new Color(220, 200, 160), 2),
                 new EmptyBorder(12, 12, 12, 12)
         ));
 
         JLabel logTitle = new JLabel("BATTLE LOG", SwingConstants.CENTER);
-        logTitle.setForeground(Color.WHITE);
+        logTitle.setForeground(new Color(240, 220, 180));
         logTitle.setFont(bodyFont);
         logTitle.setBorder(new EmptyBorder(0, 0, 10, 0));
 
@@ -336,8 +447,8 @@ public class GraphicUI extends JFrame implements GameUI {
         battleLog.setEditable(false);
         battleLog.setLineWrap(true);
         battleLog.setWrapStyleWord(true);
-        battleLog.setBackground(new Color(18, 18, 18));
-        battleLog.setForeground(Color.GREEN);
+        battleLog.setBackground(new Color(20, 16, 12));
+        battleLog.setForeground(new Color(190, 220, 180));
         battleLog.setFont(smallFont);
         battleLog.setBorder(new EmptyBorder(8, 8, 8, 8));
 
@@ -350,9 +461,94 @@ public class GraphicUI extends JFrame implements GameUI {
         centerPanel.add(enemyContainer);
         centerPanel.add(logContainer);
 
-        battlePanel.add(centerPanel, BorderLayout.CENTER);
+        resultPanel = new JPanel();
+        resultPanel.setBackground(new Color(28, 22, 16));
+        resultPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(220, 200, 160), 2),
+                new EmptyBorder(24, 24, 24, 24)
+        ));
+        resultPanel.setLayout(new BoxLayout(resultPanel, BoxLayout.Y_AXIS));
+
+        resultTitleLabel = new JLabel("VICTORY!", SwingConstants.CENTER);
+        resultTitleLabel.setForeground(new Color(240, 220, 180));
+        resultTitleLabel.setFont(titleFont);
+        resultTitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        resultMessageLabel = new JLabel("You defeated all enemies!", SwingConstants.CENTER);
+        resultMessageLabel.setForeground(Color.LIGHT_GRAY);
+        resultMessageLabel.setFont(bodyFont);
+        resultMessageLabel.setBorder(new EmptyBorder(12, 0, 20, 0));
+        resultMessageLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JButton resultReturnButton = createPixelButton("RETURN TO SETUP");
+        resultReturnButton.addActionListener(e -> {
+            battleCenterLayout.show(battleCenterPanel, "BATTLE");
+            actionContainer.setVisible(true);
+            audioPlayer.stop();
+            cardLayout.show(rootPanel, "SETUP");
+        });
+
+        JButton resultCloseButton = createPixelButton("CLOSE GAME");
+        resultCloseButton.addActionListener(e -> {
+            audioPlayer.stop();
+            dispose();
+        });
+
+        JPanel resultButtons = new JPanel(new FlowLayout(FlowLayout.CENTER, 16, 0));
+        resultButtons.setOpaque(false);
+        resultButtons.add(resultReturnButton);
+        resultButtons.add(resultCloseButton);
+
+        resultPanel.add(resultTitleLabel);
+        resultPanel.add(resultMessageLabel);
+        resultPanel.add(resultButtons);
+
+        itemPanel = new JPanel(new BorderLayout());
+        itemPanel.setBackground(new Color(28, 22, 16));
+        itemPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(220, 200, 160), 2),
+                new EmptyBorder(20, 20, 20, 20)
+        ));
+
+        JLabel itemTitle = new JLabel("CHOOSE AN ITEM", SwingConstants.CENTER);
+        itemTitle.setForeground(new Color(240, 220, 180));
+        itemTitle.setFont(bodyFont);
+        itemTitle.setBorder(new EmptyBorder(0, 0, 12, 0));
+        itemPanel.add(itemTitle, BorderLayout.NORTH);
+
+        itemGrid = new JPanel(new FlowLayout(FlowLayout.CENTER, 14, 10));
+        itemGrid.setOpaque(false);
+        itemPanel.add(itemGrid, BorderLayout.CENTER);
+
+        JButton itemBackButton = createPixelButton("BACK");
+        itemBackButton.addActionListener(e -> {
+            battleCenterLayout.show(battleCenterPanel, "BATTLE");
+            actionContainer.setVisible(true);
+        });
+
+        JPanel itemBottom = new JPanel(new FlowLayout(FlowLayout.CENTER, 16, 0));
+        itemBottom.setOpaque(false);
+        itemBottom.add(itemBackButton);
+        itemPanel.add(itemBottom, BorderLayout.SOUTH);
+
+        battleCenterLayout = new CardLayout();
+        battleCenterPanel = new JPanel(battleCenterLayout);
+        battleCenterPanel.setOpaque(false);
+        battleCenterPanel.add(centerPanel, "BATTLE");
+        battleCenterPanel.add(resultPanel, "RESULT");
+        battleCenterPanel.add(itemPanel, "ITEM");
+
+        battlePanel.add(battleCenterPanel, BorderLayout.CENTER);
 
         // Bottom area: 4 action buttons
+        actionContainer = new JPanel(new BorderLayout());
+        actionContainer.setOpaque(false);
+
+        JLabel commandTitle = new JLabel("COMMAND", SwingConstants.CENTER);
+        commandTitle.setForeground(new Color(240, 220, 180));
+        commandTitle.setFont(bodyFont);
+        commandTitle.setBorder(new EmptyBorder(0, 0, 8, 0));
+
         JPanel actionPanel = new JPanel(new GridLayout(1, 4, 12, 0));
         actionPanel.setOpaque(false);
 
@@ -403,7 +599,9 @@ public class GraphicUI extends JFrame implements GameUI {
         actionPanel.add(itemButton);
         actionPanel.add(specialButton);
 
-        battlePanel.add(actionPanel, BorderLayout.SOUTH);
+        actionContainer.add(commandTitle, BorderLayout.NORTH);
+        actionContainer.add(actionPanel, BorderLayout.CENTER);
+        battlePanel.add(actionContainer, BorderLayout.SOUTH);
 
         enablePlayerActions(false);
     }
@@ -412,15 +610,15 @@ public class GraphicUI extends JFrame implements GameUI {
     // Start the game after setup
     // ============================================================
     private void startGameFromSetup() {
-        int playerChoice = classBox.getSelectedIndex() + 1;
+        int playerChoice = selectedClassIndex + 1;
 
         int[] items = new int[] {
-                item1Box.getSelectedIndex() + 1,
-                item2Box.getSelectedIndex() + 1
+                selectedItem1Index + 1,
+                selectedItem2Index + 1
         };
 
         Difficulty difficulty;
-        switch (difficultyBox.getSelectedIndex()) {
+        switch (selectedDifficultyIndex) {
             case 0:
                 difficulty = Difficulty.EASY;
                 break;
@@ -445,6 +643,9 @@ public class GraphicUI extends JFrame implements GameUI {
         pendingPowerStone = false;
 
         cardLayout.show(rootPanel, "BATTLE");
+        battleCenterLayout.show(battleCenterPanel, "BATTLE");
+        actionContainer.setVisible(true);
+        audioPlayer.playLoop("GameAssets/music/BackGroundMusic.mp3");
         refreshBattleScreen();
 
         engine.startBattle(currentContext, difficulty);
@@ -532,6 +733,7 @@ public class GraphicUI extends JFrame implements GameUI {
         Player player = currentContext.getPlayer();
 
         playerNameLabel.setText(player.getName() + "   (Turn " + GraphicBattleEngine.getCurrentTurn() + ")");
+        updatePlayerPortrait(player);
         playerHpBar.setMaximum(player.getMaxHp());
         playerHpBar.setValue(player.getHp());
         playerHpBar.setString(player.getHp() + " / " + player.getMaxHp());
@@ -564,14 +766,14 @@ public class GraphicUI extends JFrame implements GameUI {
                 Enemy enemy = enemies.get(i);
 
                 JPanel enemyCard = new JPanel(new BorderLayout(8, 8));
-                enemyCard.setBackground(new Color(45, 45, 45));
+                enemyCard.setBackground(new Color(42, 32, 22));
                 enemyCard.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(Color.WHITE, 2),
+                        BorderFactory.createLineBorder(new Color(220, 200, 160), 2),
                         new EmptyBorder(10, 10, 10, 10)
                 ));
 
-                JLabel sprite = new JLabel(getEnemyAscii(enemy), SwingConstants.CENTER);
-                sprite.setForeground(Color.WHITE);
+                JLabel sprite = createSpriteLabel(getEnemyImagePath(enemy), getEnemyAscii(enemy));
+                sprite.setForeground(new Color(240, 220, 180));
                 sprite.setFont(bodyFont);
 
                 JButton enemyButton = createPixelButton(enemy.getName());
@@ -650,39 +852,36 @@ public class GraphicUI extends JFrame implements GameUI {
         }
 
         List<Items> inventoryItems = player.getInventory().getItems();
-        String[] options = new String[inventoryItems.size()];
+        itemGrid.removeAll();
 
         for (int i = 0; i < inventoryItems.size(); i++) {
-            options[i] = (i + 1) + ". " + inventoryItems.get(i).getName();
+            Items item = inventoryItems.get(i);
+            ImageIcon icon = getItemIcon(item.getName());
+            JButton button = createSelectionButton(item.getName(), icon);
+            final int index = i;
+            button.addActionListener(e -> {
+                Items chosenItem = inventoryItems.get(index);
+
+                if ("Power Stone".equals(chosenItem.getName()) && currentContext.getPlayer() instanceof Warrior) {
+                    pendingPowerStone = true;
+                    actionMode = ActionMode.ITEM_POWERSTONE_TARGET;
+                    appendLog("[SYSTEM] Power Stone selected. Click an enemy to trigger Shield Bash without cooldown.");
+                } else {
+                    actionMode = ActionMode.NONE;
+                    pendingPowerStone = false;
+                    engine.playerUseItem(index);
+                }
+
+                battleCenterLayout.show(battleCenterPanel, "BATTLE");
+                actionContainer.setVisible(true);
+            });
+            itemGrid.add(button);
         }
 
-        String selected = (String) JOptionPane.showInputDialog(
-                this,
-                "Choose an item:",
-                "Inventory",
-                JOptionPane.PLAIN_MESSAGE,
-                null,
-                options,
-                options[0]
-        );
-
-        if (selected == null) return;
-
-        int index = Arrays.asList(options).indexOf(selected);
-        if (index < 0) return;
-
-        Items chosenItem = inventoryItems.get(index);
-
-        // Special handling for Power Stone + Warrior target selection
-        if ("Power Stone".equals(chosenItem.getName()) && currentContext.getPlayer() instanceof Warrior) {
-            pendingPowerStone = true;
-            actionMode = ActionMode.ITEM_POWERSTONE_TARGET;
-            appendLog("[SYSTEM] Power Stone selected. Click an enemy to trigger Shield Bash without cooldown.");
-        } else {
-            actionMode = ActionMode.NONE;
-            pendingPowerStone = false;
-            engine.playerUseItem(index);
-        }
+        itemGrid.revalidate();
+        itemGrid.repaint();
+        actionContainer.setVisible(false);
+        battleCenterLayout.show(battleCenterPanel, "ITEM");
     }
     @Override
     public void showMessage(String message) {
@@ -696,37 +895,28 @@ public class GraphicUI extends JFrame implements GameUI {
     public void showBattleResult(boolean victory, BattleContext ctx) {
         enablePlayerActions(false);
 
-        String message;
         if (victory) {
-            message = "VICTORY!\nYou defeated all enemies!";
+            resultTitleLabel.setText("VICTORY!");
+            resultMessageLabel.setText("You defeated all enemies!");
             appendLog("[SYSTEM] VICTORY!");
         } else {
-            message = "DEFEAT...\nYour hero has fallen.";
+            resultTitleLabel.setText("DEFEAT...");
+            resultMessageLabel.setText("Your hero has fallen.");
             appendLog("[SYSTEM] DEFEAT...");
         }
 
-        int choice = JOptionPane.showOptionDialog(
-                this,
-                message + "\n\nWould you like to return to setup screen?",
-                "Battle Result",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.INFORMATION_MESSAGE,
-                null,
-                new String[]{"Return to Setup", "Close Game"},
-                "Return to Setup"
-        );
-
-        if (choice == 0) {
-            cardLayout.show(rootPanel, "SETUP");
-        } else {
-            dispose();
-        }
+        actionContainer.setVisible(false);
+        battleCenterLayout.show(battleCenterPanel, "RESULT");
     }
 
     // ============================================================
     // Styling helpers
     // ============================================================
     private JPanel createInfoCard(String title, String content) {
+        return createInfoCard(title, content, null);
+    }
+
+    private JPanel createInfoCard(String title, String content, List<JLabel> images) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(new Color(35, 35, 35));
         panel.setBorder(BorderFactory.createCompoundBorder(
@@ -747,10 +937,118 @@ public class GraphicUI extends JFrame implements GameUI {
         text.setBackground(new Color(35, 35, 35));
         text.setForeground(Color.LIGHT_GRAY);
 
+        JPanel body = new JPanel(new BorderLayout());
+        body.setOpaque(false);
+
+        if (images != null && !images.isEmpty()) {
+            JPanel imageRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+            imageRow.setOpaque(false);
+            for (JLabel imageLabel : images) {
+                imageRow.add(imageLabel);
+            }
+            imageRow.setBorder(new EmptyBorder(0, 0, 10, 0));
+            body.add(imageRow, BorderLayout.NORTH);
+        }
+
+        body.add(text, BorderLayout.CENTER);
+
         panel.add(titleLabel, BorderLayout.NORTH);
-        panel.add(text, BorderLayout.CENTER);
+        panel.add(body, BorderLayout.CENTER);
 
         return panel;
+    }
+
+    private JPanel createSetupSection(String title) {
+        JPanel section = new JPanel(new BorderLayout());
+        section.setOpaque(false);
+        section.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(220, 200, 160), 2),
+                new EmptyBorder(12, 12, 12, 12)
+        ));
+
+        JLabel label = new JLabel(title, SwingConstants.CENTER);
+        label.setForeground(new Color(240, 220, 180));
+        label.setFont(bodyFont);
+        label.setBorder(new EmptyBorder(0, 0, 10, 0));
+
+        section.add(label, BorderLayout.NORTH);
+        return section;
+    }
+
+    private JPanel createItemRow(String labelText, JButton[] buttons) {
+        JPanel row = new JPanel(new BorderLayout(10, 0));
+        row.setOpaque(false);
+
+        JLabel label = new JLabel(labelText);
+        label.setForeground(new Color(220, 210, 190));
+        label.setFont(smallFont);
+        label.setPreferredSize(new Dimension(90, 24));
+
+        JPanel buttonRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
+        buttonRow.setOpaque(false);
+        for (JButton button : buttons) {
+            buttonRow.add(button);
+        }
+
+        row.add(label, BorderLayout.WEST);
+        row.add(buttonRow, BorderLayout.CENTER);
+        return row;
+    }
+
+    private JButton createSelectionButton(String text, ImageIcon icon) {
+        JButton button = new JButton(text, icon);
+        button.setVerticalTextPosition(SwingConstants.BOTTOM);
+        button.setHorizontalTextPosition(SwingConstants.CENTER);
+        button.setFont(smallFont);
+        button.setFocusPainted(false);
+        button.setBackground(new Color(40, 32, 24));
+        button.setForeground(Color.WHITE);
+        button.setBorder(BorderFactory.createLineBorder(new Color(120, 100, 80), 2));
+        button.setPreferredSize(new Dimension(140, 140));
+        return button;
+    }
+
+    private void updateSelectionGroup(JButton[] buttons, int selectedIndex) {
+        for (int i = 0; i < buttons.length; i++) {
+            if (i == selectedIndex) {
+                buttons[i].setBorder(BorderFactory.createLineBorder(new Color(230, 200, 120), 3));
+                buttons[i].setBackground(new Color(70, 50, 32));
+            } else {
+                buttons[i].setBorder(BorderFactory.createLineBorder(new Color(120, 100, 80), 2));
+                buttons[i].setBackground(new Color(40, 32, 24));
+            }
+        }
+    }
+
+    private ImageIcon createBadgeIcon(String text, Color fill, Color textColor) {
+        int size = 56;
+        BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = image.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setColor(fill);
+        g2.fillRoundRect(4, 4, size - 8, size - 8, 12, 12);
+        g2.setColor(new Color(0, 0, 0, 80));
+        g2.drawRoundRect(4, 4, size - 8, size - 8, 12, 12);
+        g2.setColor(textColor);
+        g2.setFont(new Font("Monospaced", Font.BOLD, 18));
+
+        FontMetrics fm = g2.getFontMetrics();
+        int textWidth = fm.stringWidth(text);
+        int textHeight = fm.getAscent();
+        g2.drawString(text, (size - textWidth) / 2, (size + textHeight) / 2 - 4);
+        g2.dispose();
+        return new ImageIcon(image);
+    }
+
+    private ImageIcon getItemIcon(String itemName) {
+        if ("Heal Potion".equals(itemName)) {
+            return createBadgeIcon("HP", new Color(150, 40, 40), new Color(255, 235, 210));
+        } else if ("Power Stone".equals(itemName)) {
+            return createBadgeIcon("PS", new Color(40, 70, 140), new Color(230, 235, 255));
+        } else if ("Smoke Bomb".equals(itemName)) {
+            return createBadgeIcon("SM", new Color(70, 70, 70), new Color(240, 240, 240));
+        }
+        return createBadgeIcon("?", new Color(80, 80, 80), new Color(240, 240, 240));
     }
 
     private void addFormRow(JPanel form, GridBagConstraints gbc, int row, String labelText, JComponent input) {
@@ -782,6 +1080,22 @@ public class GraphicUI extends JFrame implements GameUI {
         return button;
     }
 
+    private JLabel loadImageLabel(String path, int width, int height) {
+        try {
+            Image image = ImageIO.read(new File(path));
+            if (image != null) {
+                Image scaled = image.getScaledInstance(width, height, Image.SCALE_SMOOTH);
+                return new JLabel(new ImageIcon(scaled));
+            }
+        } catch (Exception e) {
+            // Fall back to a placeholder label.
+        }
+        JLabel fallback = new JLabel("[missing]");
+        fallback.setForeground(Color.LIGHT_GRAY);
+        fallback.setFont(smallFont);
+        return fallback;
+    }
+
     private String getEnemyAscii(Enemy enemy) {
         String name = enemy.getName().toLowerCase();
         if (name.contains("goblin")) {
@@ -790,6 +1104,60 @@ public class GraphicUI extends JFrame implements GameUI {
             return "[WOLF]";
         }
         return "[ENEMY]";
+    }
+
+    private String getEnemyImagePath(Enemy enemy) {
+        String name = enemy.getName().toLowerCase();
+        if (name.contains("goblin")) {
+            return "GameAssets/images/Goblin.png";
+        } else if (name.contains("wolf")) {
+            return "GameAssets/images/Wolf.png";
+        }
+        return null;
+    }
+
+    private void updatePlayerPortrait(Player player) {
+        String path = null;
+        if (player instanceof Warrior) {
+            path = "GameAssets/images/Warrior.png";
+        } else if (player instanceof Wizard) {
+            path = "GameAssets/images/Wizard.png";
+        }
+
+        ImageIcon icon = loadImageIcon(path, 108, 108);
+        if (icon != null) {
+            playerPortraitLabel.setIcon(icon);
+            playerPortraitLabel.setText("");
+        } else {
+            playerPortraitLabel.setIcon(null);
+            playerPortraitLabel.setText("[no image]");
+            playerPortraitLabel.setForeground(Color.LIGHT_GRAY);
+            playerPortraitLabel.setFont(smallFont);
+        }
+    }
+
+    private JLabel createSpriteLabel(String path, String fallbackText) {
+        JLabel label = new JLabel(fallbackText, SwingConstants.CENTER);
+        ImageIcon icon = loadImageIcon(path, 96, 96);
+        if (icon != null) {
+            label.setText("");
+            label.setIcon(icon);
+        }
+        return label;
+    }
+
+    private ImageIcon loadImageIcon(String path, int width, int height) {
+        if (path == null) return null;
+        try {
+            Image image = ImageIO.read(new File(path));
+            if (image != null) {
+                Image scaled = image.getScaledInstance(width, height, Image.SCALE_SMOOTH);
+                return new ImageIcon(scaled);
+            }
+        } catch (Exception e) {
+            // Ignore and let caller handle fallback.
+        }
+        return null;
     }
 
     /**

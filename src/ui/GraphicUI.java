@@ -16,7 +16,6 @@ import javax.swing.border.EmptyBorder;
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.io.File;
-import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
 import java.awt.image.BufferedImage;
@@ -36,6 +35,8 @@ import java.awt.image.BufferedImage;
  * - Most of the old "console input" methods are no longer used by the new BattleEngine.
  */
 public class GraphicUI extends JFrame implements GameUI {
+    private static final String MENU_BGM_PATH = "GameAssets/music/BackGroundMusic.wav";
+    private static final String BATTLE_BGM_PATH = "GameAssets/music/Music-Dungeon.wav";
 
     // =========================
     // Window + Card Layout
@@ -43,6 +44,7 @@ public class GraphicUI extends JFrame implements GameUI {
     private CardLayout cardLayout;
     private JPanel rootPanel;
 
+    private JPanel titlePanel;
     private JPanel startPanel;
     private JPanel setupPanel;
     private JPanel battlePanel;
@@ -97,6 +99,7 @@ public class GraphicUI extends JFrame implements GameUI {
     private BattleContext currentContext;
     private GameSettings currentSettings;
     private AudioPlayer audioPlayer;
+    private Image backgroundImage;
 
     // Which action is waiting for an enemy click?
     private enum ActionMode {
@@ -112,7 +115,7 @@ public class GraphicUI extends JFrame implements GameUI {
     private boolean pendingPowerStone = false;
 
     public GraphicUI() {
-        setTitle("Pixel Battle Game");
+        setTitle("Into the Dungeon");
         setSize(1280, 820);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
@@ -120,42 +123,79 @@ public class GraphicUI extends JFrame implements GameUI {
         audioPlayer = new AudioPlayer();
 
         // Load fonts (pixel style if available)
-        titleFont = loadPixelFont(20f);
-        bodyFont = loadPixelFont(13f);
-        smallFont = loadPixelFont(11f);
+        titleFont = loadPixelFont(26f);
+        bodyFont = loadPixelFont(18f);
+        smallFont = loadPixelFont(14f);
+        backgroundImage = loadRawImage("GameAssets/images/Background.png");
 
         cardLayout = new CardLayout();
         rootPanel = new JPanel(cardLayout);
         rootPanel.setBackground(new Color(18, 18, 18));
 
+        buildTitlePanel();
         buildStartPanel();
         buildSetupPanel();
         buildBattlePanel();
 
+        rootPanel.add(titlePanel, "TITLE");
         rootPanel.add(startPanel, "START");
         rootPanel.add(setupPanel, "SETUP");
         rootPanel.add(battlePanel, "BATTLE");
 
         add(rootPanel);
-        cardLayout.show(rootPanel, "START");
+        audioPlayer.playLoop(MENU_BGM_PATH);
+        cardLayout.show(rootPanel, "TITLE");
         setVisible(true);
     }
 
     // ============================================================
-    // Screen 1: Start Screen
+    // Screen 1: Title Screen
+    // ============================================================
+    private void buildTitlePanel() {
+        titlePanel = createBackgroundPanel(new BorderLayout());
+        titlePanel.setBorder(new EmptyBorder(36, 36, 36, 36));
+
+        JPanel center = new JPanel();
+        center.setOpaque(false);
+        center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
+
+        JLabel titleImage = loadImageLabel("GameAssets/images/Title.png", 900, 300);
+        titleImage.setAlignmentX(Component.CENTER_ALIGNMENT);
+        titleImage.setHorizontalAlignment(SwingConstants.CENTER);
+
+        JButton startGameButton = createPixelButton("START GAME");
+        startGameButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        startGameButton.addActionListener(e -> cardLayout.show(rootPanel, "START"));
+
+        JButton quitButton = createPixelButton("QUIT");
+        quitButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        quitButton.addActionListener(e -> dispose());
+
+        center.add(Box.createVerticalGlue());
+        center.add(titleImage);
+        center.add(Box.createVerticalStrut(36));
+        center.add(startGameButton);
+        center.add(Box.createVerticalStrut(16));
+        center.add(quitButton);
+        center.add(Box.createVerticalGlue());
+
+        titlePanel.add(center, BorderLayout.CENTER);
+    }
+
+    // ============================================================
+    // Screen 2: Info Screen
     // ============================================================
     private void buildStartPanel() {
-        startPanel = new JPanel(new BorderLayout());
-        startPanel.setBackground(new Color(22, 22, 22));
+        startPanel = createBackgroundPanel(new BorderLayout());
         startPanel.setBorder(new EmptyBorder(24, 24, 24, 24));
 
-        JLabel title = new JLabel("PIXEL BATTLE ARENA", SwingConstants.CENTER);
+        JLabel title = new JLabel("INTO THE DUNGEON", SwingConstants.CENTER);
         title.setForeground(Color.WHITE);
         title.setFont(titleFont);
         title.setBorder(new EmptyBorder(10, 0, 20, 0));
         startPanel.add(title, BorderLayout.NORTH);
 
-        JPanel infoPanel = new JPanel(new GridLayout(1, 3, 20, 0));
+        JPanel infoPanel = new JPanel(new GridLayout(1, 4, 20, 0));
         infoPanel.setOpaque(false);
 
         infoPanel.add(createInfoCard(
@@ -165,13 +205,13 @@ public class GraphicUI extends JFrame implements GameUI {
                         "- ATK: 40\n" +
                         "- DEF: 20\n" +
                         "- SPD: 30\n" +
-                        "- Special: Shield Bash\n\n" +
+                        "- Special: Shield Bash -- Deal a basic attack, stun the enemy hit for 2 turns\n\n" +
                         "2. Wizard\n" +
                         "- HP: 200\n" +
                         "- ATK: 50\n" +
                         "- DEF: 10\n" +
                         "- SPD: 20\n" +
-                        "- Special: Arcane Blast",
+                        "- Special: Arcane Blast -- Deal basic attack to all enemies alive, +10 atk for all enemies defeated",
                 Arrays.asList(
                         loadImageLabel("GameAssets/images/Warrior.png", 96, 96),
                         loadImageLabel("GameAssets/images/Wizard.png", 96, 96)
@@ -182,8 +222,18 @@ public class GraphicUI extends JFrame implements GameUI {
                 "ENEMIES",
                 "Goblin\n" +
                         "- Balanced early enemy\n\n" +
+                        "- HP: 55\n" +
+                        "- ATK: 35\n" +
+                        "- DEF: 15\n" +
+                        "- SPD: 20\n" +
+                        "\n" +
                         "Wolf\n" +
-                        "- Stronger and faster\n\n" +
+                        "- Stronger and faster, but with lower hp and def\n\n" +
+                        "- HP: 40\n" +
+                        "- ATK: 45\n" +
+                        "- DEF: 5\n" +
+                        "- SPD: 35\n" +
+                        "\n" +
                         "Enemies vary by difficulty.\n" +
                         "Some difficulties spawn backup waves.",
                 Arrays.asList(
@@ -204,6 +254,8 @@ public class GraphicUI extends JFrame implements GameUI {
                         "- 1 Goblin + 2 Wolves backup"
         ));
 
+        infoPanel.add(createItemInfoCard());
+
         startPanel.add(infoPanel, BorderLayout.CENTER);
 
         JButton startButton = createPixelButton("START");
@@ -218,11 +270,10 @@ public class GraphicUI extends JFrame implements GameUI {
     }
 
     // ============================================================
-    // Screen 2: Setup Screen
+    // Screen 3: Setup Screen
     // ============================================================
     private void buildSetupPanel() {
-        setupPanel = new JPanel(new BorderLayout());
-        setupPanel.setBackground(new Color(24, 20, 16));
+        setupPanel = createBackgroundPanel(new BorderLayout());
         setupPanel.setBorder(new EmptyBorder(24, 24, 24, 24));
 
         JLabel title = new JLabel("GAME SETUP", SwingConstants.CENTER);
@@ -265,9 +316,9 @@ public class GraphicUI extends JFrame implements GameUI {
         itemContainer.setOpaque(false);
         itemContainer.setLayout(new BoxLayout(itemContainer, BoxLayout.Y_AXIS));
 
-        ImageIcon potionIcon = createBadgeIcon("HP", new Color(150, 40, 40), new Color(255, 235, 210));
-        ImageIcon powerIcon = createBadgeIcon("PS", new Color(40, 70, 140), new Color(230, 235, 255));
-        ImageIcon smokeIcon = createBadgeIcon("SM", new Color(70, 70, 70), new Color(240, 240, 240));
+        ImageIcon potionIcon = getItemIcon("Heal Potion");
+        ImageIcon powerIcon = getItemIcon("Power Stone");
+        ImageIcon smokeIcon = getItemIcon("Smoke Bomb");
 
         item1Buttons = new JButton[]{
                 createSelectionButton("Heal Potion", potionIcon),
@@ -348,8 +399,7 @@ public class GraphicUI extends JFrame implements GameUI {
     // Screen 3: Battle Screen
     // ============================================================
     private void buildBattlePanel() {
-        battlePanel = new JPanel(new BorderLayout(16, 16));
-        battlePanel.setBackground(new Color(24, 20, 16));
+        battlePanel = createBackgroundPanel(new BorderLayout(16, 16));
         battlePanel.setBorder(new EmptyBorder(16, 16, 16, 16));
 
         // Top area: player panel
@@ -484,7 +534,7 @@ public class GraphicUI extends JFrame implements GameUI {
         resultReturnButton.addActionListener(e -> {
             battleCenterLayout.show(battleCenterPanel, "BATTLE");
             actionContainer.setVisible(true);
-            audioPlayer.stop();
+            audioPlayer.playLoop(MENU_BGM_PATH);
             cardLayout.show(rootPanel, "SETUP");
         });
 
@@ -645,7 +695,7 @@ public class GraphicUI extends JFrame implements GameUI {
         cardLayout.show(rootPanel, "BATTLE");
         battleCenterLayout.show(battleCenterPanel, "BATTLE");
         actionContainer.setVisible(true);
-        audioPlayer.playLoop("GameAssets/music/BackGroundMusic.wav");
+        audioPlayer.playLoop(BATTLE_BGM_PATH);
         refreshBattleScreen();
 
         engine.startBattle(currentContext, difficulty);
@@ -917,6 +967,10 @@ public class GraphicUI extends JFrame implements GameUI {
     }
 
     private JPanel createInfoCard(String title, String content, List<JLabel> images) {
+        return createInfoCard(title, content, images, false);
+    }
+
+    private JPanel createInfoCard(String title, String content, List<JLabel> images, boolean verticalImages) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(new Color(35, 35, 35));
         panel.setBorder(BorderFactory.createCompoundBorder(
@@ -941,13 +995,23 @@ public class GraphicUI extends JFrame implements GameUI {
         body.setOpaque(false);
 
         if (images != null && !images.isEmpty()) {
-            JPanel imageRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
-            imageRow.setOpaque(false);
-            for (JLabel imageLabel : images) {
-                imageRow.add(imageLabel);
+            JPanel imagePanel = new JPanel();
+            imagePanel.setOpaque(false);
+            if (verticalImages) {
+                imagePanel.setLayout(new BoxLayout(imagePanel, BoxLayout.Y_AXIS));
+            } else {
+                imagePanel.setLayout(new FlowLayout(FlowLayout.CENTER, 10, 0));
             }
-            imageRow.setBorder(new EmptyBorder(0, 0, 10, 0));
-            body.add(imageRow, BorderLayout.NORTH);
+            for (int i = 0; i < images.size(); i++) {
+                JLabel imageLabel = images.get(i);
+                imageLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+                imagePanel.add(imageLabel);
+                if (verticalImages && i < images.size() - 1) {
+                    imagePanel.add(Box.createVerticalStrut(8));
+                }
+            }
+            imagePanel.setBorder(new EmptyBorder(0, 0, 10, 0));
+            body.add(imagePanel, BorderLayout.NORTH);
         }
 
         body.add(text, BorderLayout.CENTER);
@@ -956,6 +1020,67 @@ public class GraphicUI extends JFrame implements GameUI {
         panel.add(body, BorderLayout.CENTER);
 
         return panel;
+    }
+
+    private JPanel createItemInfoCard() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(new Color(35, 35, 35));
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.WHITE, 2),
+                new EmptyBorder(14, 14, 14, 14)
+        ));
+
+        JLabel titleLabel = new JLabel("ITEMS", SwingConstants.CENTER);
+        titleLabel.setForeground(Color.WHITE);
+        titleLabel.setFont(bodyFont);
+        titleLabel.setBorder(new EmptyBorder(0, 0, 12, 0));
+        panel.add(titleLabel, BorderLayout.NORTH);
+
+        JPanel body = new JPanel();
+        body.setOpaque(false);
+        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+
+        body.add(createItemIntroRow(
+                "GameAssets/images/Heal_Potion.png",
+                "Heal Potion",
+                "Heal for 100 HP"
+        ));
+        body.add(Box.createVerticalStrut(12));
+        body.add(createItemIntroRow(
+                "GameAssets/images/Power_Stone.png",
+                "Power Stone",
+                "Trigger your special once without cooldown"
+        ));
+        body.add(Box.createVerticalStrut(12));
+        body.add(createItemIntroRow(
+                "GameAssets/images/Smoke_Bomb.png",
+                "Smoke Bomb",
+                "Receive 0 damage for the next 2 turns"
+        ));
+
+        panel.add(body, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private JPanel createItemIntroRow(String imagePath, String itemName, String description) {
+        JPanel row = new JPanel(new BorderLayout(12, 0));
+        row.setOpaque(false);
+
+        JLabel iconLabel = loadImageLabel(imagePath, 56, 56);
+        iconLabel.setPreferredSize(new Dimension(56, 56));
+        iconLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        row.add(iconLabel, BorderLayout.WEST);
+
+        JTextArea text = new JTextArea(itemName + "\n- " + description);
+        text.setEditable(false);
+        text.setLineWrap(true);
+        text.setWrapStyleWord(true);
+        text.setFont(smallFont);
+        text.setBackground(new Color(35, 35, 35));
+        text.setForeground(Color.LIGHT_GRAY);
+        row.add(text, BorderLayout.CENTER);
+
+        return row;
     }
 
     private JPanel createSetupSection(String title) {
@@ -1041,6 +1166,12 @@ public class GraphicUI extends JFrame implements GameUI {
     }
 
     private ImageIcon getItemIcon(String itemName) {
+        String path = getItemImagePath(itemName);
+        ImageIcon icon = loadImageIcon(path, 72, 72);
+        if (icon != null) {
+            return icon;
+        }
+
         if ("Heal Potion".equals(itemName)) {
             return createBadgeIcon("HP", new Color(150, 40, 40), new Color(255, 235, 210));
         } else if ("Power Stone".equals(itemName)) {
@@ -1049,6 +1180,17 @@ public class GraphicUI extends JFrame implements GameUI {
             return createBadgeIcon("SM", new Color(70, 70, 70), new Color(240, 240, 240));
         }
         return createBadgeIcon("?", new Color(80, 80, 80), new Color(240, 240, 240));
+    }
+
+    private String getItemImagePath(String itemName) {
+        if ("Heal Potion".equals(itemName)) {
+            return "GameAssets/images/Heal_Potion.png";
+        } else if ("Power Stone".equals(itemName)) {
+            return "GameAssets/images/Power_Stone.png";
+        } else if ("Smoke Bomb".equals(itemName)) {
+            return "GameAssets/images/Smoke_Bomb.png";
+        }
+        return null;
     }
 
     private void addFormRow(JPanel form, GridBagConstraints gbc, int row, String labelText, JComponent input) {
@@ -1081,14 +1223,9 @@ public class GraphicUI extends JFrame implements GameUI {
     }
 
     private JLabel loadImageLabel(String path, int width, int height) {
-        try {
-            Image image = ImageIO.read(new File(path));
-            if (image != null) {
-                Image scaled = image.getScaledInstance(width, height, Image.SCALE_SMOOTH);
-                return new JLabel(new ImageIcon(scaled));
-            }
-        } catch (Exception e) {
-            // Fall back to a placeholder label.
+        ImageIcon icon = loadImageIcon(path, width, height);
+        if (icon != null) {
+            return new JLabel(icon);
         }
         JLabel fallback = new JLabel("[missing]");
         fallback.setForeground(Color.LIGHT_GRAY);
@@ -1146,13 +1283,33 @@ public class GraphicUI extends JFrame implements GameUI {
         return label;
     }
 
+    private JPanel createBackgroundPanel(LayoutManager layout) {
+        return new JPanel(layout) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                if (backgroundImage != null) {
+                    g.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
+                } else {
+                    super.paintComponent(g);
+                }
+            }
+        };
+    }
+
+    private Image loadRawImage(String path) {
+        try {
+            return ImageIO.read(new File(path));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     private ImageIcon loadImageIcon(String path, int width, int height) {
         if (path == null) return null;
         try {
-            Image image = ImageIO.read(new File(path));
+            BufferedImage image = ImageIO.read(new File(path));
             if (image != null) {
-                Image scaled = image.getScaledInstance(width, height, Image.SCALE_SMOOTH);
-                return new ImageIcon(scaled);
+                return new ImageIcon(scaleToFit(image, width, height));
             }
         } catch (Exception e) {
             // Ignore and let caller handle fallback.
@@ -1160,23 +1317,35 @@ public class GraphicUI extends JFrame implements GameUI {
         return null;
     }
 
+    private Image scaleToFit(BufferedImage image, int maxWidth, int maxHeight) {
+        double scale = Math.min((double) maxWidth / image.getWidth(), (double) maxHeight / image.getHeight());
+        scale = Math.min(scale, 1.0);
+
+        int scaledWidth = Math.max(1, (int) Math.round(image.getWidth() * scale));
+        int scaledHeight = Math.max(1, (int) Math.round(image.getHeight() * scale));
+
+        BufferedImage canvas = new BufferedImage(maxWidth, maxHeight, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = canvas.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+
+        int x = (maxWidth - scaledWidth) / 2;
+        int y = (maxHeight - scaledHeight) / 2;
+        g2.drawImage(image, x, y, scaledWidth, scaledHeight, null);
+        g2.dispose();
+        return canvas;
+    }
+
     /**
-     * Loads a pixel font from resources if available.
-     *
-     * Put your font here if you want:
-     * src/assets/fonts/PressStart2P-Regular.ttf
-     *
-     * If not found, it falls back to Monospaced.
+     * Loads the bundled pixel font from GameAssets if available.
+     * Falls back to Monospaced if the font file cannot be loaded.
      */
     private Font loadPixelFont(float size) {
         try {
-            InputStream is = getClass().getResourceAsStream("/assets/fonts/PressStart2P-Regular.ttf");
-            if (is != null) {
-                Font base = Font.createFont(Font.TRUETYPE_FONT, is);
-                return base.deriveFont(size);
-            }
+            Font base = Font.createFont(Font.TRUETYPE_FONT, new File("GameAssets/fonts/Minecraft.ttf"));
+            return base.deriveFont(size);
         } catch (Exception e) {
-            e.printStackTrace();
+            // Ignore and use fallback font.
         }
         return new Font("Monospaced", Font.BOLD, (int) size);
     }

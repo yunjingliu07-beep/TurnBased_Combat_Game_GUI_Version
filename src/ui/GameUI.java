@@ -20,6 +20,7 @@ public interface GameUI {
     void showEnemies(BattleContext ctx);
     int chooseTarget(BattleContext ctx);
     int chooseItem(BattleContext ctx);
+    void showMessage(String message);
 
     //Methods after the game ends
     void showBattleResult(boolean victory, BattleContext ctx);

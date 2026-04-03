@@ -7,11 +7,11 @@ import ui.GameUI;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BattleEngine {
+public class ConsoleBattleEngine {
     private final GameUI gameUI;
     private static int currentTurn;
 
-    public BattleEngine(GameUI gameUI) {
+    public ConsoleBattleEngine(GameUI gameUI) {
         this.gameUI = gameUI;
     }
 

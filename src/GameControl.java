@@ -5,6 +5,7 @@ import items.PowerStone;
 import items.SmokeBomb;
 import ui.ConsoleUI;
 import ui.GameUI;
+import ui.GraphicUI;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,7 +13,7 @@ import java.util.Scanner;
 
 public  class GameControl {
     public static void main(String[] args) {
-        GameUI gameUI = new ConsoleUI();
+        GameUI gameUI = new GraphicUI();
         Scanner input = new Scanner(System.in);
 
         System.out.println("Welcome to the battle!\n");
@@ -133,13 +134,13 @@ public  class GameControl {
     }
 
     //Run the game once using the given BattleContext
-    public static BattleOutcome runSingleGame(GameUI ui, GameSettings gameSettings) {
+    public static void runSingleGame(GameUI ui, GameSettings gameSettings) {
         //Get the BattleContext created using the game setting
         BattleContext battleContext = createBattleContext(gameSettings, ui);
 
         //Create a BattleEngine to run the game
-        BattleEngine engine = new BattleEngine(ui);
+        GraphicBattleEngine engine = new GraphicBattleEngine((GraphicUI) ui);
 
-        return engine.runGame(battleContext, gameSettings.getDifficulty());
+        engine.startBattle(battleContext, gameSettings.getDifficulty());
     }
 }

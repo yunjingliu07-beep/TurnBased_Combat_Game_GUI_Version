@@ -1,8 +1,7 @@
 package ui;
 
 import control.BattleContext;
-import control.BattleEngine;
-import control.BattleOutcome;
+import control.ConsoleBattleEngine;
 import control.Difficulty;
 import domain.Enemy;
 import domain.Player;
@@ -141,10 +140,10 @@ public class ConsoleUI implements GameUI {
     public void showBattleResult(boolean victory, BattleContext ctx) {
         if (victory) {
             System.out.println("You win! Remaining HP: " + ctx.getPlayer().getHp());
-            System.out.println("After " + BattleEngine.getCurrentTurn() + "turn(s), you defeated all enemies and win!");
+            System.out.println("After " + ConsoleBattleEngine.getCurrentTurn() + "turn(s), you defeated all enemies and win!");
         }
         else {
-            System.out.println("After " + BattleEngine.getCurrentTurn() + "turn(s), you are defeated by enemies!");
+            System.out.println("After " + ConsoleBattleEngine.getCurrentTurn() + "turn(s), you are defeated by enemies!");
         }
     }
     @Override

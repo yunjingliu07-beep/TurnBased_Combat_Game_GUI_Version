@@ -645,7 +645,7 @@ public class GraphicUI extends JFrame implements GameUI {
         cardLayout.show(rootPanel, "BATTLE");
         battleCenterLayout.show(battleCenterPanel, "BATTLE");
         actionContainer.setVisible(true);
-        audioPlayer.playLoop("GameAssets/music/BackGroundMusic.mp3");
+        audioPlayer.playLoop("GameAssets/music/BackGroundMusic.wav");
         refreshBattleScreen();
 
         engine.startBattle(currentContext, difficulty);

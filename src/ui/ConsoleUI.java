@@ -134,6 +134,10 @@ public class ConsoleUI implements GameUI {
         }
 
     }
+    @Override
+    public void showMessage(String message) {
+        System.out.println(message);
+    }
 
     //Methods after the game ends
     @Override

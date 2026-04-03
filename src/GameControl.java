@@ -13,44 +13,9 @@ import java.util.Scanner;
 
 public  class GameControl {
     public static void main(String[] args) {
-        GameUI gameUI = new GraphicUI();
-        Scanner input = new Scanner(System.in);
-
-        System.out.println("Welcome to the battle!\n");
-
-        GameSettings lastSetting = null;
-        boolean gameRunning = true;
-        while (gameRunning) {
-            // If it's the 1st time to start the game or the user choose to start a new game
-            if (lastSetting == null) {
-                lastSetting = createNewSettings(gameUI);
-            }
-            //Run the game once
-            BattleOutcome result = runSingleGame(gameUI, lastSetting);
-
-            //If player wins, quit the game, else, ask for restart
-            if(result == BattleOutcome.WIN) {
-                gameRunning = false;
-            }
-            else{
-                int restartChoice = gameUI.restartOption();
-                // Ask for restart choices
-                switch (restartChoice) {
-                    case 1:
-                        //Restart using the same setting
-                        System.out.println("Restart using the same setting...\n");
-                        break;
-                    case 2:
-                        //Start a new game
-                        System.out.println("Start a new game!\n");
-                        lastSetting = createNewSettings(gameUI);
-                        break;
-                    case 3:
-                        //Quit
-                        gameRunning = false;
-                }
-            }
-        }
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            new GraphicUI();
+        });
     }
 
     // Create a GameSettings file to store the current settings of the game

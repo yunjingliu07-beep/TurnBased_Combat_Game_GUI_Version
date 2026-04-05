@@ -4,7 +4,7 @@ import control.BattleContext;
 import control.GraphicBattleEngine;
 import control.Difficulty;
 import control.GameSettings;
-import control.GraphicBattleEngine;
+import domain.Combatant;
 import domain.Enemy;
 import domain.Player;
 import domain.Warrior;
@@ -17,7 +17,9 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.io.File;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.awt.image.BufferedImage;
 
 /**
@@ -100,6 +102,15 @@ public class GraphicUI extends JFrame implements GameUI {
     private GameSettings currentSettings;
     private AudioPlayer audioPlayer;
     private Image backgroundImage;
+    private Timer activeAnimationTimer;
+    private final Map<Combatant, Integer> combatantOffsetX = new HashMap<>();
+    private final Map<Combatant, Color> combatantHighlight = new HashMap<>();
+    private final Map<Combatant, JComponent> combatantSpriteComponents = new HashMap<>();
+    private final Map<Combatant, JPanel> combatantCardComponents = new HashMap<>();
+    private final Color defaultEnemyCardColor = new Color(42, 32, 22);
+    private final Color playerHighlightColor = new Color(230, 180, 90);
+    private final Color attackHitColor = new Color(150, 52, 38);
+    private final Color spellHitColor = new Color(46, 110, 120);
 
     // Which action is waiting for an enemy click?
     private enum ActionMode {
@@ -781,6 +792,8 @@ public class GraphicUI extends JFrame implements GameUI {
         if (currentContext == null) return;
 
         Player player = currentContext.getPlayer();
+        combatantSpriteComponents.clear();
+        combatantCardComponents.clear();
 
         playerNameLabel.setText(player.getName() + "   (Turn " + GraphicBattleEngine.getCurrentTurn() + ")");
         updatePlayerPortrait(player);
@@ -816,7 +829,7 @@ public class GraphicUI extends JFrame implements GameUI {
                 Enemy enemy = enemies.get(i);
 
                 JPanel enemyCard = new JPanel(new BorderLayout(8, 8));
-                enemyCard.setBackground(new Color(42, 32, 22));
+                enemyCard.setBackground(defaultEnemyCardColor);
                 enemyCard.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(new Color(220, 200, 160), 2),
                         new EmptyBorder(10, 10, 10, 10)
@@ -825,6 +838,9 @@ public class GraphicUI extends JFrame implements GameUI {
                 JLabel sprite = createSpriteLabel(getEnemyImagePath(enemy), getEnemyAscii(enemy));
                 sprite.setForeground(new Color(240, 220, 180));
                 sprite.setFont(bodyFont);
+                combatantSpriteComponents.put(enemy, sprite);
+                combatantCardComponents.put(enemy, enemyCard);
+                applyCombatantVisualState(enemy);
 
                 JButton enemyButton = createPixelButton(enemy.getName());
                 final int enemyIndex = i;
@@ -861,6 +877,131 @@ public class GraphicUI extends JFrame implements GameUI {
 
         enemyPanel.revalidate();
         enemyPanel.repaint();
+    }
+
+    public void playAttackAnimation(Combatant attacker, Combatant target, Runnable onComplete) {
+        int direction = (attacker instanceof Player) ? 1 : -1;
+        playAnimation(attacker, target, direction, attackHitColor, false, onComplete);
+    }
+
+    public void playAreaAttackAnimation(Combatant attacker, List<? extends Combatant> targets, Runnable onComplete) {
+        stopActiveAnimation();
+        clearAnimationState();
+
+        combatantHighlight.put(attacker, playerHighlightColor);
+        for (Combatant target : targets) {
+            combatantHighlight.put(target, spellHitColor);
+            applyCombatantVisualState(target);
+        }
+        applyCombatantVisualState(attacker);
+
+        final long start = System.currentTimeMillis();
+        final int durationMs = 420;
+
+        activeAnimationTimer = new Timer(16, e -> {
+            float progress = Math.min(1f, (System.currentTimeMillis() - start) / (float) durationMs);
+            int pulse = (int) Math.round(Math.sin(progress * Math.PI) * 18);
+            combatantOffsetX.put(attacker, pulse);
+            applyCombatantVisualState(attacker);
+
+            if (progress >= 1f) {
+                stopActiveAnimation();
+                clearAnimationState();
+                onComplete.run();
+            }
+        });
+        activeAnimationTimer.start();
+    }
+
+    private void playAnimation(Combatant attacker, Combatant target, int direction, Color hitColor, boolean pulseTarget, Runnable onComplete) {
+        stopActiveAnimation();
+        clearAnimationState();
+
+        final long start = System.currentTimeMillis();
+        final int durationMs = 320;
+        final int travelPx = 26;
+
+        activeAnimationTimer = new Timer(16, e -> {
+            float progress = Math.min(1f, (System.currentTimeMillis() - start) / (float) durationMs);
+            float lungeProgress = progress < 0.45f
+                    ? progress / 0.45f
+                    : 1f - ((progress - 0.45f) / 0.55f);
+
+            combatantOffsetX.put(attacker, Math.round(travelPx * lungeProgress * direction));
+            combatantHighlight.put(attacker, playerHighlightColor);
+
+            if (progress >= 0.30f && progress <= 0.72f) {
+                combatantHighlight.put(target, hitColor);
+                if (pulseTarget) {
+                    combatantOffsetX.put(target, Math.round((1f - Math.abs(0.5f - progress) * 5f) * 10f * -direction));
+                }
+            } else {
+                combatantHighlight.remove(target);
+                if (pulseTarget) {
+                    combatantOffsetX.remove(target);
+                }
+            }
+
+            applyCombatantVisualState(attacker);
+            applyCombatantVisualState(target);
+
+            if (progress >= 1f) {
+                stopActiveAnimation();
+                clearAnimationState();
+                onComplete.run();
+            }
+        });
+        activeAnimationTimer.start();
+    }
+
+    private void stopActiveAnimation() {
+        if (activeAnimationTimer != null) {
+            activeAnimationTimer.stop();
+            activeAnimationTimer = null;
+        }
+    }
+
+    private void clearAnimationState() {
+        for (Combatant combatant : combatantSpriteComponents.keySet()) {
+            combatantOffsetX.remove(combatant);
+            combatantHighlight.remove(combatant);
+            applyCombatantVisualState(combatant);
+        }
+
+        if (currentContext != null) {
+            Player player = currentContext.getPlayer();
+            combatantOffsetX.remove(player);
+            combatantHighlight.remove(player);
+            applyCombatantVisualState(player);
+        }
+    }
+
+    private void applyCombatantVisualState(Combatant combatant) {
+        if (combatant == null) return;
+
+        int offsetX = combatantOffsetX.getOrDefault(combatant, 0);
+        Color highlight = combatantHighlight.get(combatant);
+
+        if (combatant instanceof Player) {
+            playerPortraitLabel.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(highlight != null ? highlight : new Color(220, 200, 160), 2),
+                    new EmptyBorder(6, 6 + Math.max(0, offsetX), 6, 6 + Math.max(0, -offsetX))
+            ));
+            playerPortraitLabel.repaint();
+            return;
+        }
+
+        JComponent sprite = combatantSpriteComponents.get(combatant);
+        if (sprite != null) {
+            sprite.setBorder(new EmptyBorder(0, Math.max(0, offsetX), 0, Math.max(0, -offsetX)));
+            sprite.repaint();
+        }
+
+        JPanel card = combatantCardComponents.get(combatant);
+        if (card != null) {
+            card.setBackground(highlight != null ? highlight : defaultEnemyCardColor);
+            card.repaint();
+        }
     }
 
     private void onEnemyClicked(int enemyIndex) {
@@ -1271,6 +1412,9 @@ public class GraphicUI extends JFrame implements GameUI {
             playerPortraitLabel.setForeground(Color.LIGHT_GRAY);
             playerPortraitLabel.setFont(smallFont);
         }
+
+        combatantSpriteComponents.put(player, playerPortraitLabel);
+        applyCombatantVisualState(player);
     }
 
     private JLabel createSpriteLabel(String path, String fallbackText) {

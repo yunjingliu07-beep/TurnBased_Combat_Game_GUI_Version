@@ -12,7 +12,6 @@ import domain.Wizard;
 import items.Items;
 import ui.GraphicUI;
 
-import javax.swing.Timer;
 import java.util.List;
 
 /**
@@ -46,7 +45,6 @@ public class GraphicBattleEngine {
 
     private boolean battleEnded = false;
     private static int currentTurn;
-    private static final int ACTION_DELAY_MS = 1000;
 
     public GraphicBattleEngine(GraphicUI gameUI) {
         this.gameUI = gameUI;
@@ -211,7 +209,7 @@ public class GraphicBattleEngine {
 
         gameUI.appendLog("[ENEMY TURN] " + enemy.getName() + " attacks " + player.getName() + "!");
         gameUI.appendLog("Damage dealt: " + damage);
-        runWithDelay(() -> {
+        gameUI.playAttackAnimation(enemy, player, () -> {
             if (battleEnded) return;
             BasicAttackAction attack = new BasicAttackAction(player);
             attack.execute(ctx, enemy);
@@ -255,7 +253,7 @@ public class GraphicBattleEngine {
         gameUI.appendLog(player.getName() + " uses Basic Attack on " + target.getName() + "!");
         gameUI.appendLog("Damage dealt: " + damage);
 
-        runWithDelay(() -> {
+        gameUI.playAttackAnimation(player, target, () -> {
             if (battleEnded) return;
             BasicAttackAction action = new BasicAttackAction(target);
             boolean defeated = action.execute(ctx, player);
@@ -319,7 +317,7 @@ public class GraphicBattleEngine {
                 gameUI.appendLog("Special skill triggered without cooldown: Arcane Blast!");
 
                 gameUI.enablePlayerActions(false);
-                runWithDelay(() -> {
+                gameUI.playAreaAttackAnimation(player, List.copyOf(ctx.getAliveEnemies()), () -> {
                     if (battleEnded) return;
                     ArcaneBlast blast = new ArcaneBlast(false); // no cooldown consumption
                     blast.execute(ctx, player);
@@ -385,7 +383,7 @@ public class GraphicBattleEngine {
         gameUI.appendLog("Special skill triggered without cooldown: Shield Bash on " + target.getName() + "!");
 
         gameUI.enablePlayerActions(false);
-        runWithDelay(() -> {
+        gameUI.playAttackAnimation(player, target, () -> {
             if (battleEnded) return;
             // false = do NOT consume cooldown
             ShieldBash shieldBash = new ShieldBash(target, false);
@@ -430,7 +428,7 @@ public class GraphicBattleEngine {
             gameUI.appendLog("Damage dealt: " + damage);
 
             gameUI.enablePlayerActions(false);
-            runWithDelay(() -> {
+            gameUI.playAttackAnimation(player, target, () -> {
                 if (battleEnded) return;
                 // true = consume cooldown normally
                 ShieldBash action = new ShieldBash(target, true);
@@ -451,7 +449,7 @@ public class GraphicBattleEngine {
             gameUI.appendLog("Attacks all enemies!");
 
             gameUI.enablePlayerActions(false);
-            runWithDelay(() -> {
+            gameUI.playAreaAttackAnimation(player, List.copyOf(ctx.getAliveEnemies()), () -> {
                 if (battleEnded) return;
                 ArcaneBlast action = new ArcaneBlast(true); // consume cooldown normally
                 action.execute(ctx, player);
@@ -461,12 +459,6 @@ public class GraphicBattleEngine {
         }
 
         finishPlayerAction(player);
-    }
-
-    private void runWithDelay(Runnable action) {
-        Timer timer = new Timer(ACTION_DELAY_MS, e -> action.run());
-        timer.setRepeats(false);
-        timer.start();
     }
 
     // ============================================================
